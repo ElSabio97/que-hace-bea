@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crew Data Capture</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+  <div class="bg-white p-6 rounded-lg shadow-lg">
+    <h1 class="text-2xl font-bold mb-4">Crew Data Capture</h1>
+    <button id="startButton" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Start Capture</button>
+    <p id="status" class="mt-4 text-gray-600">Click the button to begin.</p>
+  </div>
+  <script>
+    const startButton = document.getElementById('startButton');
+    const status = document.getElementById('status');
+
+    startButton.addEventListener('click', async () => {
+      status.textContent = 'Opening login window...';
+      try {
+        const response = await fetch('http://localhost:3000/start-capture', { method: 'POST' });
+        const result = await response.json();
+        if (result.success) {
+          status.textContent = 'Data captured successfully!';
+        } else {
+          status.textContent = 'Failed to capture data.';
+        }
+      } catch (error) {
+        status.textContent = 'Error: ' + error.message;
+      }
+    });
+  </script>
+</body>
+</html>

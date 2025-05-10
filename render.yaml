@@ -1,0 +1,18 @@
+# Configuración para desplegar la aplicación en Render
+services:
+  - type: web
+    name: crew-data-capture
+    env: node
+    repo: https://github.com/your-username/crew-data-capture # Reemplaza con tu repo de GitHub
+    plan: free
+    branch: main
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      - key: PUPPETEER_EXECUTABLE_PATH
+        sync: false
+        value: /usr/bin/google-chrome
+    autoDeploy: true
+    healthCheckPath: /
