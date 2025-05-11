@@ -19,19 +19,48 @@
 
     startButton.addEventListener('click', async () => {
       status.textContent = 'Opening login window...';
-      // Abrir ventana de login en el navegador del usuario
       const loginWindow = window.open('https://crewroom.swiftair.com/eCrew', '_blank');
       if (!loginWindow) {
         status.textContent = 'Error: Please allow popups for this site.';
         return;
       }
 
+      // Esperar a que la ventana cargue
+      loginWindow.addEventListener('load', () => {
+        // Inyectar script para capturar respuestas de red
+        const script = loginWindow.document.createElement('script');
+        script.textContent = `
+          (function() {
+            const originalFetch = window.fetch;
+            window.fetch = async function(...args) {
+              const response = await originalFetch(...args);
+              if (args[0].includes('CrewSchedule')) {
+                const clone = response.clone();
+                const text = await clone.text();
+                const eventsMatch = text.match(/var\\s+Events\\s*=\\s*\\[\\{.*?\\}\\]/);
+                if (eventsMatch) {
+                  const events = JSON.parse(eventsMatch[0].replace(/var\\s+Events\\s*=\\s*/, ''));
+                  fetch('${backendUrl}/save-events', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ events })
+                  }).then(() => {
+                    window.close(); // Cerrar la ventana tras enviar los datos
+                  });
+                }
+              }
+              return response;
+            };
+          })();
+        `;
+        loginWindow.document.head.appendChild(script);
+      });
+
       try {
         const response = await fetch(`${backendUrl}/start-capture`, { method: 'POST' });
         const result = await response.json();
         if (result.success) {
           status.textContent = 'Data captured successfully!';
-          loginWindow.close();
         } else {
           status.textContent = 'Failed to capture data.';
         }
