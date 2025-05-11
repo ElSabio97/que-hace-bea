@@ -1,5 +1,6 @@
 const express = require('express');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
 const fs = require('fs');
 const cors = require('cors');
 const path = require('path');
@@ -19,11 +20,11 @@ app.get('/', (req, res) => {
 app.post('/start-capture', async (req, res) => {
   let browser;
   try {
-    console.log('Launching Puppeteer...');
+    console.log('Launching Puppeteer with Chromium...');
     browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-      // Elimina executablePath para usar el Chrome incluido con Puppeteer
+      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+      executablePath: await chromium.executablePath()
     });
     console.log('Browser launched successfully');
 
