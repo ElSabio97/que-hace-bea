@@ -3,15 +3,15 @@ services:
   - type: web
     name: crew-data-capture
     env: node
-    repo: https://github.com/your-username/crew-data-capture # Reemplaza con tu repo de GitHub
+    repo: https://github.com/ElSabio97/que-hace-bea # Reemplaza con tu repo de GitHub
     plan: free
     branch: main
-    buildCommand: npm install && npx puppeteer browsers install chrome
+    buildCommand: npm install && mkdir -p /opt/render/project/.cache/puppeteer && npx puppeteer browsers install chrome --path /opt/render/project/.cache/puppeteer
     startCommand: node server.js
     envVars:
       - key: NODE_VERSION
         value: 18
       - key: PUPPETEER_CACHE_DIR
-        value: /opt/render/.cache/puppeteer
+        value: /opt/render/project/.cache/puppeteer
     autoDeploy: true
     healthCheckPath: /
