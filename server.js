@@ -19,10 +19,14 @@ app.get('/', (req, res) => {
 app.post('/start-capture', async (req, res) => {
   let browser;
   try {
+    console.log('Launching Puppeteer...');
     browser = await puppeteer.launch({
-      headless: false,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome'
     });
+    console.log('Browser launched successfully');
+
     const page = await browser.newPage();
 
     let events = null;
@@ -41,6 +45,7 @@ app.post('/start-capture', async (req, res) => {
           if (eventsMatch) {
             events = JSON.parse(eventsMatch[0].replace(/var\s+Events\s*=\s*/, ''));
             fs.writeFileSync('Events.json', JSON.stringify(events, null, 2));
+            console.log('Events captured and saved');
           }
         } catch (e) {
           console.error('Error processing response:', e);
@@ -48,17 +53,22 @@ app.post('/start-capture', async (req, res) => {
       }
     });
 
+    console.log('Navigating to eCrew...');
     await page.goto('https://crewroom.swiftair.com/eCrew', { waitUntil: 'networkidle2' });
 
+    // Esperar un tiempo limitado para capturar datos
     await new Promise((resolve) => {
-      browser.on('disconnected', () => {
+      setTimeout(() => {
+        console.log('Capture timeout reached');
         resolve();
-      });
+      }, 60000); // 60 segundos
     });
 
     await browser.close();
+    console.log('Browser closed');
     return res.json({ success: !!events });
   } catch (error) {
+    console.error('Error in /start-capture:', error);
     if (browser) await browser.close();
     return res.status(500).json({ success: false, error: error.message });
   }
