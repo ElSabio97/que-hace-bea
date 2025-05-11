@@ -25,73 +25,58 @@
         return;
       }
 
-      // Inyectar script después de que la ventana cargue completamente
+      // Esperar a que la ventana cargue y retrasar la inyección
       loginWindow.addEventListener('load', () => {
-        const script = loginWindow.document.createElement('script');
-        script.textContent = `
-          (function() {
-            // Monitorear carga de recursos
-            const originalScriptSrc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
-            Object.defineProperty(HTMLScriptElement.prototype, 'src', {
-              set: function(url) {
-                console.log('Script load intercepted:', url);
-                if (url.toLowerCase().includes('crewschedule')) {
-                  console.log('CrewSchedule detected in script');
-                  fetch(url).then(response => response.text()).then(text => {
-                    const eventsMatch = text.match(/var\\s+Events\\s*=\\s*\\[\\{.*?\\}\\]/);
-                    if (eventsMatch) {
-                      console.log('Events found in script');
-                      const events = JSON.parse(eventsMatch[0].replace(/var\\s+Events\\s*=\\s*/, ''));
-                      fetch('${backendUrl}/save-events', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ events })
-                      }).then(() => {
-                        window.opener.postMessage({ success: true }, '${backendUrl}');
-                        window.close();
-                      }).catch(err => console.error('Error sending events:', err));
+        setTimeout(() => {
+          try {
+            const script = loginWindow.document.createElement('script');
+            script.textContent = `
+              console.log('Script injected successfully in eCrew');
+              (function() {
+                // Monitorear carga de recursos
+                const observer = new PerformanceObserver((list) => {
+                  for (const entry of list.getEntries()) {
+                    console.log('Resource detected:', entry.name);
+                    if (entry.name.toLowerCase().includes('crewschedule')) {
+                      console.log('CrewSchedule detected in network:', entry.name);
+                      fetch(entry.name).then(response => response.text()).then(text => {
+                        const eventsMatch = text.match(/var\\s+Events\\s*=\\s*\\[\\{.*?\\}\\]/);
+                        if (eventsMatch) {
+                          console.log('Events found in network');
+                          const events = JSON.parse(eventsMatch[0].replace(/var\\s+Events\\s*=\\s*/, ''));
+                          fetch('${backendUrl}/save-events', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ events })
+                          }).then(() => {
+                            window.opener.postMessage({ success: true }, '${backendUrl}');
+                            window.close();
+                          }).catch(err => console.error('Error sending events:', err));
+                        } else {
+                          console.log('No Events found in:', entry.name);
+                        }
+                      }).catch(err => console.error('Error fetching resource:', err));
                     }
-                  });
-                }
-                originalScriptSrc.set.call(this, url);
-              }
-            });
-
-            // Monitorear todas las solicitudes de red
-            const observer = new PerformanceObserver((list) => {
-              for (const entry of list.getEntries()) {
-                if (entry.name.toLowerCase().includes('crewschedule')) {
-                  console.log('CrewSchedule detected in network:', entry.name);
-                  fetch(entry.name).then(response => response.text()).then(text => {
-                    const eventsMatch = text.match(/var\\s+Events\\s*=\\s*\\[\\{.*?\\}\\]/);
-                    if (eventsMatch) {
-                      console.log('Events found in network');
-                      const events = JSON.parse(eventsMatch[0].replace(/var\\s+Events\\s*=\\s*/, ''));
-                      fetch('${backendUrl}/save-events', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ events })
-                      }).then(() => {
-                        window.opener.postMessage({ success: true }, '${backendUrl}');
-                        window.close();
-                      }).catch(err => console.error('Error sending events:', err));
-                    }
-                  });
-                }
-              }
-            });
-            observer.observe({ entryTypes: ['resource'] });
-          })();
-        `;
-        loginWindow.document.head.appendChild(script);
+                  }
+                });
+                observer.observe({ entryTypes: ['resource'] });
+              })();
+            `;
+            loginWindow.document.head.appendChild(script);
+            console.log('Script injection attempted');
+          } catch (error) {
+            console.error('Error injecting script:', error);
+            status.textContent = 'Error: Failed to inject script';
+          }
+        }, 2000); // Retraso de 2 segundos
       });
+    });
 
-      // Escuchar confirmación de captura
-      window.addEventListener('message', (event) => {
-        if (event.origin === backendUrl && event.data.success) {
-          status.textContent = 'Data captured successfully!';
-        }
-      });
+    // Escuchar confirmación de captura
+    window.addEventListener('message', (event) => {
+      if (event.origin === backendUrl && event.data.success) {
+        status.textContent = 'Data captured successfully!';
+      }
     });
   </script>
 </body>
