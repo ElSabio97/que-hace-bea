@@ -2,7 +2,7 @@ services:
   - type: web
     name: crew-data-capture
     env: node
-    repo: https://github.com/your-username/crew-data-capture # Reemplaza con tu repo
+    repo: https://github.com/ElSabio97/que-hace-bea # Reemplaza con tu repo
     plan: free
     branch: main
     buildCommand: npm install
