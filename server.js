@@ -15,22 +15,23 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Ruta para iniciar la captura (respuesta dummy para mantener compatibilidad)
+// Ruta para iniciar la captura (respuesta dummy)
 app.post('/start-capture', (req, res) => {
   console.log('Capture process started');
   return res.json({ success: true });
 });
 
-// Ruta para guardar los eventos enviados por el script inyectado
+// Ruta para guardar los eventos
 app.post('/save-events', (req, res) => {
   try {
+    console.log('Received request to /save-events');
     const { events } = req.body;
     if (events) {
       fs.writeFileSync('Events.json', JSON.stringify(events, null, 2));
       console.log('Events captured and saved');
       return res.json({ success: true });
     } else {
-      console.log('No events received');
+      console.log('No events received in /save-events');
       return res.status(400).json({ success: false, error: 'No events provided' });
     }
   } catch (error) {
