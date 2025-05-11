@@ -15,11 +15,13 @@
   <script>
     const startButton = document.getElementById('startButton');
     const status = document.getElementById('status');
+    // Usa la URL del servidor desplegado (reemplaza con tu URL de Render)
+    const backendUrl = window.location.origin; // Usa el mismo dominio que el frontend
 
     startButton.addEventListener('click', async () => {
       status.textContent = 'Opening login window...';
       try {
-        const response = await fetch('http://localhost:3000/start-capture', { method: 'POST' });
+        const response = await fetch(`${backendUrl}/start-capture`, { method: 'POST' });
         const result = await response.json();
         if (result.success) {
           status.textContent = 'Data captured successfully!';
