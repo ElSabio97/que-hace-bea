@@ -6,13 +6,12 @@ services:
     repo: https://github.com/your-username/crew-data-capture # Reemplaza con tu repo de GitHub
     plan: free
     branch: main
-    buildCommand: npm install
+    buildCommand: npm install && npx puppeteer browsers install chrome
     startCommand: node server.js
     envVars:
       - key: NODE_VERSION
         value: 18
-      - key: PUPPETEER_EXECUTABLE_PATH
-        sync: false
-        value: /usr/bin/google-chrome
+      - key: PUPPETEER_CACHE_DIR
+        value: /opt/render/.cache/puppeteer
     autoDeploy: true
     healthCheckPath: /
