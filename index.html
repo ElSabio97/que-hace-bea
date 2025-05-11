@@ -15,16 +15,23 @@
   <script>
     const startButton = document.getElementById('startButton');
     const status = document.getElementById('status');
-    // Usa la URL del servidor desplegado (reemplaza con tu URL de Render)
-    const backendUrl = window.location.origin; // Usa el mismo dominio que el frontend
+    const backendUrl = window.location.origin;
 
     startButton.addEventListener('click', async () => {
       status.textContent = 'Opening login window...';
+      // Abrir ventana de login en el navegador del usuario
+      const loginWindow = window.open('https://crewroom.swiftair.com/eCrew', '_blank');
+      if (!loginWindow) {
+        status.textContent = 'Error: Please allow popups for this site.';
+        return;
+      }
+
       try {
         const response = await fetch(`${backendUrl}/start-capture`, { method: 'POST' });
         const result = await response.json();
         if (result.success) {
           status.textContent = 'Data captured successfully!';
+          loginWindow.close();
         } else {
           status.textContent = 'Failed to capture data.';
         }
