@@ -22,8 +22,8 @@ app.post('/start-capture', async (req, res) => {
     console.log('Launching Puppeteer...');
     browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome'
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+      // Elimina executablePath para usar el Chrome incluido con Puppeteer
     });
     console.log('Browser launched successfully');
 
