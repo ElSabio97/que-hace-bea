@@ -24,7 +24,7 @@ app.post('/start-capture', (req, res) => {
 // Ruta para guardar los eventos
 app.post('/save-events', (req, res) => {
   try {
-    console.log('Received request to /save-events');
+    console.log('Received request to /save-events:', JSON.stringify(req.body));
     const { events } = req.body;
     if (events) {
       fs.writeFileSync('Events.json', JSON.stringify(events, null, 2));
