@@ -2,15 +2,27 @@ const express = require('express');
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Servir archivos estáticos (index.html)
+app.use(express.static(path.join(__dirname)));
+
+// Ruta para la página principal
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 app.post('/start-capture', async (req, res) => {
   let browser;
   try {
-    browser = await puppeteer.launch({ headless: false });
+    browser = await puppeteer.launch({
+      headless: false,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
     const page = await browser.newPage();
 
     let events = null;
@@ -52,6 +64,7 @@ app.post('/start-capture', async (req, res) => {
   }
 });
 
-app.listen(3000, () => {
-  console.log('Server running on http://localhost:3000');
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });
