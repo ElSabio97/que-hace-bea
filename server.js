@@ -1,6 +1,4 @@
 const express = require('express');
-const puppeteer = require('puppeteer-core');
-const chromium = require('@sparticuz/chromium');
 const fs = require('fs');
 const cors = require('cors');
 const path = require('path');
@@ -17,60 +15,26 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.post('/start-capture', async (req, res) => {
-  let browser;
+// Ruta para iniciar la captura (respuesta dummy para mantener compatibilidad)
+app.post('/start-capture', (req, res) => {
+  console.log('Capture process started');
+  return res.json({ success: true });
+});
+
+// Ruta para guardar los eventos enviados por el script inyectado
+app.post('/save-events', (req, res) => {
   try {
-    console.log('Launching Puppeteer with Chromium...');
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-      executablePath: await chromium.executablePath()
-    });
-    console.log('Browser launched successfully');
-
-    const page = await browser.newPage();
-
-    let events = null;
-
-    await page.setRequestInterception(true);
-    page.on('request', (request) => {
-      request.continue();
-    });
-
-    page.on('response', async (response) => {
-      const url = response.url();
-      if (url.includes('CrewSchedule')) {
-        try {
-          const text = await response.text();
-          const eventsMatch = text.match(/var\s+Events\s*=\s*\[\{.*?\}\]/);
-          if (eventsMatch) {
-            events = JSON.parse(eventsMatch[0].replace(/var\s+Events\s*=\s*/, ''));
-            fs.writeFileSync('Events.json', JSON.stringify(events, null, 2));
-            console.log('Events captured and saved');
-          }
-        } catch (e) {
-          console.error('Error processing response:', e);
-        }
-      }
-    });
-
-    console.log('Navigating to eCrew...');
-    await page.goto('https://crewroom.swiftair.com/eCrew', { waitUntil: 'networkidle2' });
-
-    // Esperar un tiempo limitado para capturar datos
-    await new Promise((resolve) => {
-      setTimeout(() => {
-        console.log('Capture timeout reached');
-        resolve();
-      }, 60000); // 60 segundos
-    });
-
-    await browser.close();
-    console.log('Browser closed');
-    return res.json({ success: !!events });
+    const { events } = req.body;
+    if (events) {
+      fs.writeFileSync('Events.json', JSON.stringify(events, null, 2));
+      console.log('Events captured and saved');
+      return res.json({ success: true });
+    } else {
+      console.log('No events received');
+      return res.status(400).json({ success: false, error: 'No events provided' });
+    }
   } catch (error) {
-    console.error('Error in /start-capture:', error);
-    if (browser) await browser.close();
+    console.error('Error saving events:', error);
     return res.status(500).json({ success: false, error: error.message });
   }
 });
