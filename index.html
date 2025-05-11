@@ -17,7 +17,7 @@
     const status = document.getElementById('status');
     const backendUrl = window.location.origin;
 
-    startButton.addEventListener('click', async () => {
+    startButton.addEventListener('click', () => {
       status.textContent = 'Opening login window...';
       const loginWindow = window.open('https://crewroom.swiftair.com/eCrew', '_blank');
       if (!loginWindow) {
@@ -25,70 +25,71 @@
         return;
       }
 
-      // Inyectar script después de que la ventana cargue
+      // Inyectar script después de que la ventana cargue completamente
       loginWindow.addEventListener('load', () => {
         const script = loginWindow.document.createElement('script');
         script.textContent = `
           (function() {
-            // Interceptar fetch
-            const originalFetch = window.fetch;
-            window.fetch = async function(...args) {
-              console.log('Fetch intercepted:', args[0]);
-              const response = await originalFetch(...args);
-              if (args[0].toLowerCase().includes('crewschedule')) {
-                console.log('CrewSchedule detected in fetch');
-                const clone = response.clone();
-                const text = await clone.text();
-                const eventsMatch = text.match(/var\\s+Events\\s*=\\s*\\[\\{.*?\\}\\]/);
-                if (eventsMatch) {
-                  console.log('Events found in fetch');
-                  const events = JSON.parse(eventsMatch[0].replace(/var\\s+Events\\s*=\\s*/, ''));
-                  fetch('${backendUrl}/save-events', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ events })
-                  }).then(() => {
-                    window.close();
+            // Monitorear carga de recursos
+            const originalScriptSrc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
+            Object.defineProperty(HTMLScriptElement.prototype, 'src', {
+              set: function(url) {
+                console.log('Script load intercepted:', url);
+                if (url.toLowerCase().includes('crewschedule')) {
+                  console.log('CrewSchedule detected in script');
+                  fetch(url).then(response => response.text()).then(text => {
+                    const eventsMatch = text.match(/var\\s+Events\\s*=\\s*\\[\\{.*?\\}\\]/);
+                    if (eventsMatch) {
+                      console.log('Events found in script');
+                      const events = JSON.parse(eventsMatch[0].replace(/var\\s+Events\\s*=\\s*/, ''));
+                      fetch('${backendUrl}/save-events', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ events })
+                      }).then(() => {
+                        window.opener.postMessage({ success: true }, '${backendUrl}');
+                        window.close();
+                      }).catch(err => console.error('Error sending events:', err));
+                    }
+                  });
+                }
+                originalScriptSrc.set.call(this, url);
+              }
+            });
+
+            // Monitorear todas las solicitudes de red
+            const observer = new PerformanceObserver((list) => {
+              for (const entry of list.getEntries()) {
+                if (entry.name.toLowerCase().includes('crewschedule')) {
+                  console.log('CrewSchedule detected in network:', entry.name);
+                  fetch(entry.name).then(response => response.text()).then(text => {
+                    const eventsMatch = text.match(/var\\s+Events\\s*=\\s*\\[\\{.*?\\}\\]/);
+                    if (eventsMatch) {
+                      console.log('Events found in network');
+                      const events = JSON.parse(eventsMatch[0].replace(/var\\s+Events\\s*=\\s*/, ''));
+                      fetch('${backendUrl}/save-events', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ events })
+                      }).then(() => {
+                        window.opener.postMessage({ success: true }, '${backendUrl}');
+                        window.close();
+                      }).catch(err => console.error('Error sending events:', err));
+                    }
                   });
                 }
               }
-              return response;
-            };
-
-            // Interceptar XHR
-            const originalOpen = XMLHttpRequest.prototype.open;
-            XMLHttpRequest.prototype.open = function(method, url) {
-              console.log('XHR intercepted:', url);
-              if (url.toLowerCase().includes('crewschedule')) {
-                this.addEventListener('load', () => {
-                  console.log('CrewSchedule detected in XHR');
-                  const text = this.responseText;
-                  const eventsMatch = text.match(/var\\s+Events\\s*=\\s*\\[\\{.*?\\}\\]/);
-                  if (eventsMatch) {
-                    console.log('Events found in XHR');
-                    const events = JSON.parse(eventsMatch[0].replace(/var\\s+Events\\s*=\\s*/, ''));
-                    fetch('${backendUrl}/save-events', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ events })
-                    }).then(() => {
-                      window.close();
-                    });
-                  }
-                });
-              }
-              originalOpen.apply(this, arguments);
-            };
+            });
+            observer.observe({ entryTypes: ['resource'] });
           })();
         `;
         loginWindow.document.head.appendChild(script);
       });
 
-      // Escuchar mensajes del backend (opcional, para depuración)
+      // Escuchar confirmación de captura
       window.addEventListener('message', (event) => {
         if (event.origin === backendUrl && event.data.success) {
           status.textContent = 'Data captured successfully!';
-          loginWindow.close();
         }
       });
     });
